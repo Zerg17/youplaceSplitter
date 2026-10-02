@@ -100,10 +100,11 @@ async function load(f){
       let raw;
       if(Array.isArray(g.pixels))raw=Uint8Array.from(g.pixels);
       else{const bin=atob(g.pixels);raw=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)raw[i]=bin.charCodeAt(i)}
-      if(raw.length===W*H*3&&d.version!=='2.0')rgb=raw;
-      else if(raw.length>=W*H){ // legacy: 1 byte per pixel, palette index
+      const v1=d.version==='1.0'||raw.length===W*H*7;
+      if(!v1&&raw.length===W*H*3&&d.version!=='2.0')rgb=raw;
+      else if(v1||raw.length>=W*H){ // legacy palette formats: v1.0 = 7 bytes/pixel (index in byte 6), v2.0 = 1 byte/pixel
         rgb=new Uint8Array(W*H*3);
-        for(let i=0;i<W*H;i++){const c=PAL[raw[i]];if(!c||!c[3])continue;
+        for(let i=0;i<W*H;i++){const c=PAL[v1?raw[i*7+6]:raw[i]];if(!c||!c[3])continue;
           if(!(c[0]|c[1]|c[2])){rgb[i*3]=rgb[i*3+1]=rgb[i*3+2]=1}else{rgb[i*3]=c[0];rgb[i*3+1]=c[1];rgb[i*3+2]=c[2]}}
       }else throw new Error('Unrecognised .you format');
       org=[g.originTileX,g.originTileY,g.originLocalX,g.originLocalY];
