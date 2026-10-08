@@ -44,7 +44,7 @@ button.ok{background:var(--success)}
 <body>
 <aside data-mode="auto" id="side">
   <h1>YouPlace Splitter</h1>
-  <div id="drop">Drop PNG / JPG / .you here<br>or click to choose</div>
+  <div id="drop">Drop PNG / JPG / .you here,<br>click to choose, or paste (Ctrl+V)</div>
   <input id="file" type="file" accept=".png,.jpg,.jpeg,.webp,.gif,.you" hidden>
   <div class="hint" id="fileinfo"></div>
 
@@ -264,13 +264,27 @@ $('go').onclick=async()=>{
 
 $('png').onclick=()=>IM.src.toBlob(b=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=($('prefix').value||IM.name)+'.png';a.click()});
 
-['tx','ty','lx','ly'].forEach(id=>$(id).addEventListener('paste',e=>{
-  const n=(e.clipboardData.getData('text').match(/-?\d+/g)||[]).map(Number);
-  if(n.length<4)return;
-  e.preventDefault();
-  ['tx','ty','lx','ly'].forEach((k,i)=>$(k).value=n[i]);
-  IM&&recompute();
-}));
+const isPosInput=el=>el&&/^(tx|ty|lx|ly)$/.test(el.id);
+document.addEventListener('paste',e=>{
+  const dt=e.clipboardData;if(!dt)return;
+  // 1) image or .you file copied to the clipboard
+  const f=[...dt.files].find(f=>f.type.startsWith('image/')||/\.you$/i.test(f.name||''));
+  if(f){e.preventDefault();load(f);return}
+  const text=(dt.getData('text')||'').trim();
+  if(!text)return;
+  // 2) .you guide JSON copied as text
+  if(/^\{/.test(text)&&/"guide"\s*:/.test(text)){
+    e.preventDefault();
+    load(new File([text],'clipboard.you',{type:'application/json'}));return;
+  }
+  // 3) four numbers -> position fields (from anywhere, or from a position input)
+  const n=(text.match(/-?\d+/g)||[]).map(Number);
+  if(n.length>=4&&(isPosInput(e.target)||!(e.target instanceof HTMLInputElement))){
+    e.preventDefault();
+    ['tx','ty','lx','ly'].forEach((k,i)=>$(k).value=n[i]);
+    IM&&recompute();
+  }
+});
 
 // ---------- wiring ----------
 const KEY='youplaceSplitterSettings',SET=['target','sw','sh','gc','gr'],CHK=['trim','ovw'];
